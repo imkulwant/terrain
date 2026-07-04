@@ -1,5 +1,7 @@
 import json
 import sqlite3
+from collections.abc import Generator
+from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
@@ -9,12 +11,16 @@ DB_DIR = Path.home() / ".terrain"
 DB_PATH = DB_DIR / "terrain.db"
 
 
-def _get_connection() -> sqlite3.Connection:
+@contextmanager
+def _connect() -> Generator[sqlite3.Connection, None, None]:
     DB_DIR.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     _init_schema(conn)
-    return conn
+    try:
+        yield conn
+    finally:
+        conn.close()
 
 
 def _init_schema(conn: sqlite3.Connection) -> None:
@@ -41,25 +47,23 @@ def _deserialize_items(data: str) -> list[Item]:
 
 
 def save_snapshot(items: list[Item]) -> int:
-    conn = _get_connection()
-    now = datetime.now().isoformat()
-    data = _serialize_items(items)
-    cur = conn.execute(
-        "INSERT INTO snapshots (scanned_at, item_count, data) VALUES (?, ?, ?)",
-        (now, len(items), data),
-    )
-    conn.commit()
-    snapshot_id = cur.lastrowid
-    conn.close()
-    return snapshot_id
+    with _connect() as conn:
+        now = datetime.now().isoformat()
+        data = _serialize_items(items)
+        cur = conn.execute(
+            "INSERT INTO snapshots (scanned_at, item_count, data) VALUES (?, ?, ?)",
+            (now, len(items), data),
+        )
+        conn.commit()
+        assert cur.lastrowid is not None
+        return cur.lastrowid
 
 
 def latest_snapshot() -> Snapshot | None:
-    conn = _get_connection()
-    row = conn.execute(
-        "SELECT * FROM snapshots ORDER BY id DESC LIMIT 1"
-    ).fetchone()
-    conn.close()
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM snapshots ORDER BY id DESC LIMIT 1"
+        ).fetchone()
     if row is None:
         return None
     return Snapshot(
@@ -70,11 +74,10 @@ def latest_snapshot() -> Snapshot | None:
 
 
 def previous_snapshot() -> Snapshot | None:
-    conn = _get_connection()
-    row = conn.execute(
-        "SELECT * FROM snapshots ORDER BY id DESC LIMIT 1 OFFSET 1"
-    ).fetchone()
-    conn.close()
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM snapshots ORDER BY id DESC LIMIT 1 OFFSET 1"
+        ).fetchone()
     if row is None:
         return None
     return Snapshot(
@@ -85,29 +88,25 @@ def previous_snapshot() -> Snapshot | None:
 
 
 def all_snapshots() -> list[Snapshot]:
-    conn = _get_connection()
-    rows = conn.execute(
-        "SELECT id, scanned_at, item_count FROM snapshots ORDER BY id DESC"
-    ).fetchall()
-    conn.close()
-    result = []
-    for row in rows:
-        result.append(
-            Snapshot(
-                id=row["id"],
-                scanned_at=datetime.fromisoformat(row["scanned_at"]),
-                items=[],
-            )
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT id, scanned_at, item_count FROM snapshots ORDER BY id DESC"
+        ).fetchall()
+    return [
+        Snapshot(
+            id=row["id"],
+            scanned_at=datetime.fromisoformat(row["scanned_at"]),
+            items=[],
         )
-    return result
+        for row in rows
+    ]
 
 
 def get_snapshot(snapshot_id: int) -> Snapshot:
-    conn = _get_connection()
-    row = conn.execute(
-        "SELECT * FROM snapshots WHERE id = ?", (snapshot_id,)
-    ).fetchone()
-    conn.close()
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT * FROM snapshots WHERE id = ?", (snapshot_id,)
+        ).fetchone()
     if row is None:
         raise ValueError(f"No snapshot with id={snapshot_id}")
     return Snapshot(

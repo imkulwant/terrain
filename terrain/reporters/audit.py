@@ -3,7 +3,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from terrain.models import AuditFlag, AuditSeverity, Item, Snapshot
+from terrain.models import AuditFlag, AuditSeverity, Snapshot
 
 SEVERITY_STYLE = {
     AuditSeverity.critical: ("bold red", "[!]"),

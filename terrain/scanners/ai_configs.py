@@ -1,17 +1,11 @@
 import json
 import re
 from pathlib import Path
+from typing import Any
 
+from terrain.audit.secrets import SECRET_PATTERNS
 from terrain.models import AuditFlag, AuditSeverity, Item, ItemType
 from terrain.scanners.base import BaseScanner
-
-SECRET_PATTERNS = [
-    (r"sk-[A-Za-z0-9]{48}", "OpenAI API Key"),
-    (r"sk-ant-[A-Za-z0-9\-_]{80,}", "Anthropic API Key"),
-    (r"ghp_[A-Za-z0-9]{36}", "GitHub Personal Token"),
-    (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),
-    (r'(?i)(api[_-]?key|apikey)\s*[=:]\s*["\']?([A-Za-z0-9_\-]{20,})', "API Key"),
-]
 
 
 def _find_secrets_in_text(text: str, location: str) -> list[AuditFlag]:
@@ -28,9 +22,10 @@ def _find_secrets_in_text(text: str, location: str) -> list[AuditFlag]:
     return flags
 
 
-def _read_json(path: Path) -> dict | None:
+def _read_json(path: Path) -> dict[str, Any] | None:
     try:
-        return json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        data = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        return data if isinstance(data, dict) else None
     except Exception:
         return None
 
@@ -65,7 +60,7 @@ class AIConfigsScanner(BaseScanner):
 
         audit_flags: list[AuditFlag] = []
         config_paths: list[str] = []
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
 
         # Gather all relevant files
         for fname in [
@@ -178,7 +173,7 @@ class AIConfigsScanner(BaseScanner):
             return []
 
         config_paths: list[str] = []
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
         audit_flags: list[AuditFlag] = []
 
         # Look for settings files
@@ -226,7 +221,7 @@ class AIConfigsScanner(BaseScanner):
             return []
 
         config_paths: list[str] = []
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
         audit_flags: list[AuditFlag] = []
 
         hosts_json = Path.home() / ".config" / "github-copilot" / "hosts.json"
@@ -263,7 +258,7 @@ class AIConfigsScanner(BaseScanner):
             return []
 
         config_paths = [str(config_path)]
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
         audit_flags: list[AuditFlag] = []
 
         data = _read_json(config_path)
@@ -302,7 +297,7 @@ class AIConfigsScanner(BaseScanner):
         if not ollama and not models_dir.exists():
             return []
 
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
         audit_flags: list[AuditFlag] = []
         locations: list[str] = []
 

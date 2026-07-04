@@ -1,5 +1,4 @@
 import json
-import re
 
 from terrain.models import Item, ItemType
 from terrain.scanners.base import BaseScanner

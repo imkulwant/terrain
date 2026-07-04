@@ -3,15 +3,17 @@ from pathlib import Path
 
 from terrain.models import AuditFlag, AuditSeverity
 
-SECRET_PATTERNS = [
+# Canonical list of secret patterns used across the codebase.
+# Order matters: specific patterns (provider keys) come before generic ones.
+SECRET_PATTERNS: list[tuple[str, str]] = [
+    (r"sk-[A-Za-z0-9]{48}", "OpenAI API Key"),
+    (r"sk-ant-[A-Za-z0-9\-_]{80,}", "Anthropic API Key"),
+    (r"ghp_[A-Za-z0-9]{36}", "GitHub Personal Token"),
+    (r"AKIA[0-9A-Z]{16}", "AWS Access Key"),
     (r'(?i)(api[_-]?key|apikey)\s*[=:]\s*["\']?([A-Za-z0-9_\-]{20,})', "API Key"),
     (r'(?i)(secret[_-]?key|secret)\s*[=:]\s*["\']?([A-Za-z0-9_\-]{20,})', "Secret Key"),
     (r'(?i)(token|access[_-]?token)\s*[=:]\s*["\']?([A-Za-z0-9_\-\.]{20,})', "Token"),
     (r'(?i)(password|passwd|pwd)\s*[=:]\s*["\']?(\S{8,})', "Password"),
-    (r'sk-[A-Za-z0-9]{48}', "OpenAI API Key"),
-    (r'sk-ant-[A-Za-z0-9\-_]{80,}', "Anthropic API Key"),
-    (r'ghp_[A-Za-z0-9]{36}', "GitHub Personal Token"),
-    (r'AKIA[0-9A-Z]{16}', "AWS Access Key"),
 ]
 
 

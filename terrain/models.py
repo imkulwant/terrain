@@ -1,9 +1,11 @@
-from enum import Enum
 from datetime import datetime
+from enum import StrEnum
+from typing import Any
+
 from pydantic import BaseModel
 
 
-class ItemType(str, Enum):
+class ItemType(StrEnum):
     package = "package"
     cask = "cask"
     app_store = "app_store"
@@ -15,7 +17,7 @@ class ItemType(str, Enum):
     shell_config = "shell_config"
 
 
-class AuditSeverity(str, Enum):
+class AuditSeverity(StrEnum):
     info = "info"
     warning = "warning"
     critical = "critical"
@@ -35,9 +37,9 @@ class Item(BaseModel):
     installed_at: datetime | None = None
     locations: list[str] = []
     config_paths: list[str] = []
-    permissions: dict = {}
+    permissions: dict[str, Any] = {}
     env_vars: list[str] = []
-    metadata: dict = {}
+    metadata: dict[str, Any] = {}
     audit_flags: list[AuditFlag] = []
 
 

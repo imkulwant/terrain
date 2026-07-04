@@ -4,6 +4,7 @@ import re
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from terrain.models import AuditFlag, AuditSeverity, Item, ItemType
 from terrain.scanners.base import BaseScanner
@@ -86,7 +87,7 @@ class BinsScanner(BaseScanner):
                     version: str | None = None
                     file_type = ""
                     file_hash = ""
-                    metadata: dict = {}
+                    metadata: dict[str, Any] = {}
 
                     if source == "direct_install":
                         version = self._get_version(entry)

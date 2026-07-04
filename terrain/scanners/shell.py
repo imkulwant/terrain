@@ -1,5 +1,6 @@
 import re
 from pathlib import Path
+from typing import Any
 
 from terrain.models import AuditFlag, AuditSeverity, Item, ItemType
 from terrain.scanners.base import BaseScanner
@@ -33,6 +34,11 @@ VERSION_MANAGER_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
+# Interactive shells run on every new tab/subshell; login shells run once at session start.
+# PATH exports in interactive configs re-set PATH on every subshell, causing ordering issues.
+# They belong in the login-shell counterpart instead.
+INTERACTIVE_FILES = {".zshrc": ".zprofile", ".bashrc": ".bash_profile"}
+
 SYSTEM_COMMANDS = {
     "ls", "cat", "grep", "find", "sed", "awk", "git", "python", "python3",
     "node", "npm", "ruby", "java", "go", "curl", "wget", "cp", "mv", "rm",
@@ -65,7 +71,7 @@ class ShellScanner(BaseScanner):
 
     def _analyze_shell_file(self, path: Path, text: str) -> Item:
         audit_flags: list[AuditFlag] = []
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
 
         # PATH modifications
         path_additions: list[str] = []
@@ -79,6 +85,28 @@ class ShellScanner(BaseScanner):
                     path_additions.append(expanded)
         if path_additions:
             metadata["path_additions"] = path_additions
+
+        # Flag export PATH= in interactive shell files - these belong in the login-shell counterpart.
+        # .zshrc runs on every new tab/subshell, so PATH is rebuilt each time and may get stale or
+        # doubled entries. The login file (.zprofile) runs once per session.
+        if path.name in INTERACTIVE_FILES:
+            login_file = INTERACTIVE_FILES[path.name]
+            for line_num, line in enumerate(text.splitlines(), 1):
+                stripped = line.strip()
+                if stripped.startswith("#"):
+                    continue
+                if re.match(r"export\s+PATH=", stripped):
+                    audit_flags.append(
+                        AuditFlag(
+                            severity=AuditSeverity.info,
+                            message=(
+                                f"export PATH in {path.name} (line {line_num}): "
+                                f"move to ~/{login_file} so it runs once at login, "
+                                f"not on every new shell"
+                            ),
+                            location=str(path),
+                        )
+                    )
 
         # Exported env vars (names only, redact values that look like secrets)
         exported_vars: list[str] = []

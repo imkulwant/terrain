@@ -1,25 +1,25 @@
 import sys
 import traceback
-from typing import Callable
+from collections.abc import Callable
 
 from terrain.models import Item
+from terrain.scanners.ai_configs import AIConfigsScanner
 from terrain.scanners.base import BaseScanner
+from terrain.scanners.bins import BinsScanner
 from terrain.scanners.brew import BrewScanner
-from terrain.scanners.pip import PipScanner
-from terrain.scanners.npm import NpmScanner
 from terrain.scanners.cargo import CargoScanner
 from terrain.scanners.gem import GemScanner
-from terrain.scanners.mas import MasScanner
-from terrain.scanners.pyenv import PyenvScanner
 from terrain.scanners.jenv import JenvScanner
-from terrain.scanners.nvm import NvmScanner
-from terrain.scanners.mise import MiseScanner
-from terrain.scanners.bins import BinsScanner
-from terrain.scanners.ai_configs import AIConfigsScanner
 from terrain.scanners.launchd import LaunchdScanner
+from terrain.scanners.mas import MasScanner
+from terrain.scanners.mise import MiseScanner
+from terrain.scanners.npm import NpmScanner
+from terrain.scanners.nvm import NvmScanner
+from terrain.scanners.path_dirs import PathDirsScanner
+from terrain.scanners.pip import PipScanner
+from terrain.scanners.pyenv import PyenvScanner
 from terrain.scanners.shell import ShellScanner
 from terrain.scanners.ssh import SSHScanner
-from terrain.scanners.path_dirs import PathDirsScanner
 
 # BinsScanner is handled separately for post-processing
 _BINS_SCANNER = BinsScanner()
@@ -54,6 +54,7 @@ def scan_all(
 
     # Run primary scanners first
     for idx, scanner in enumerate(_PRIMARY_SCANNERS):
+        scanner.verbose = verbose
         if progress_callback:
             progress_callback(scanner.name, idx, total)
         try:
@@ -68,6 +69,7 @@ def scan_all(
                 traceback.print_exc(file=sys.stderr)
 
     # Pass known items to BinsScanner for orphan cross-referencing
+    _BINS_SCANNER.verbose = verbose
     _BINS_SCANNER.set_known_items(items)
 
     if progress_callback:

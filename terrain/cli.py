@@ -1,13 +1,11 @@
 from __future__ import annotations
 
-import sys
-from typing import Optional
+from typing import NoReturn
 
 import typer
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 from rich.table import Table
-from rich.text import Text
 
 from terrain import __version__
 from terrain.models import AuditSeverity, Item, ItemType
@@ -21,15 +19,29 @@ console = Console()
 err_console = Console(stderr=True)
 
 
-def _abort(msg: str) -> None:
+def _version_callback(value: bool) -> None:
+    if value:
+        typer.echo(f"terrain {__version__}")
+        raise typer.Exit()
+
+
+@app.callback()
+def _root(
+    version: bool | None = typer.Option(
+        None,
+        "--version",
+        "-V",
+        callback=_version_callback,
+        is_eager=True,
+        help="Show version and exit.",
+    ),
+) -> None:
+    pass
+
+
+def _abort(msg: str) -> NoReturn:
     err_console.print(f"[red]Error:[/red] {msg}")
     raise typer.Exit(1)
-
-
-@app.command()
-def version() -> None:
-    """Show terrain version."""
-    console.print(f"terrain {__version__}")
 
 
 @app.command()
@@ -37,8 +49,8 @@ def scan(
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show scanner errors"),
 ) -> None:
     """Scan this Mac and save a snapshot."""
-    from terrain.scanner import scan_all
     from terrain import store
+    from terrain.scanner import scan_all
 
     items: list[Item] = []
 
@@ -72,7 +84,7 @@ def scan(
 
     console.print(f"\n[bold green]Scan complete[/bold green] (snapshot #{snapshot_id})")
     console.print(f"  Items found: [bold]{len(items)}[/bold]")
-    console.print(f"  Audit flags: ", end="")
+    console.print("  Audit flags: ", end="")
     if critical:
         console.print(f"[bold red][!] {critical} critical[/bold red]  ", end="")
     if warnings:
@@ -99,16 +111,19 @@ def status() -> None:
 
 @app.command("list")
 def list_items(
-    type_filter: Optional[str] = typer.Option(
+    type_filter: str | None = typer.Option(
         None, "--type", "-t",
         help="Filter by item type (package, cask, binary, ai_config, ...)",
     ),
-    source_filter: Optional[str] = typer.Option(
+    source_filter: str | None = typer.Option(
         None, "--source", "-s",
         help="Filter by source (brew, pip, npm, cargo, ...)",
     ),
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
 ) -> None:
     """List items from the latest snapshot."""
+    import json as _json
+
     from terrain import store
 
     latest = store.latest_snapshot()
@@ -121,6 +136,10 @@ def list_items(
         items = [i for i in items if i.item_type.value == type_filter]
     if source_filter:
         items = [i for i in items if source_filter.lower() in i.source.lower()]
+
+    if json_output:
+        typer.echo(_json.dumps([i.model_dump(mode="json") for i in items], indent=2))
+        return
 
     if not items:
         console.print("[dim]No items match the filter.[/dim]")
@@ -201,18 +220,31 @@ def diff() -> None:
 
 
 @app.command()
-def audit() -> None:
+def audit(
+    json_output: bool = typer.Option(False, "--json", help="Output as JSON."),
+) -> None:
     """Show all audit flags from the latest snapshot."""
+    import json as _json
+
     from terrain import store
-    from terrain.reporters.audit import render_audit
     from terrain.audit.secrets import scan_common_dotfiles
+    from terrain.reporters.audit import render_audit
 
     latest = store.latest_snapshot()
     if not latest:
         _abort("No snapshots found. Run 'terrain scan' first.")
 
-    # Also scan common dotfiles for secrets
     extra_flags = scan_common_dotfiles()
+
+    if json_output:
+        all_flags = []
+        for item in latest.items:
+            for flag in item.audit_flags:
+                all_flags.append({"item": item.name, **flag.model_dump(mode="json")})
+        for flag in extra_flags:
+            all_flags.append({"item": "secrets-scan", **flag.model_dump(mode="json")})
+        typer.echo(_json.dumps(all_flags, indent=2))
+        return
 
     render_audit(console, latest, extra_flags)
 
@@ -280,9 +312,9 @@ def ai() -> None:
         console.print("[dim]No AI config items found.[/dim]")
         return
 
-    from rich.panel import Panel
-    from rich.tree import Tree
     import json
+
+    from rich.panel import Panel
 
     for item in ai_items:
         content_lines: list[str] = []
@@ -315,7 +347,7 @@ def ai() -> None:
 
         # Config paths
         if item.config_paths:
-            content_lines.append(f"\n[dim]Config files:[/dim]")
+            content_lines.append("\n[dim]Config files:[/dim]")
             for cp in item.config_paths[:8]:
                 content_lines.append(f"  {cp}")
             if len(item.config_paths) > 8:
@@ -333,7 +365,6 @@ def ai() -> None:
                     icon = "[blue][i][/blue]"
                 content_lines.append(f"  {icon} {flag.message}")
 
-        from rich.markup import escape
         body = "\n".join(content_lines)
 
         console.print(Panel(

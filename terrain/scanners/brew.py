@@ -1,6 +1,7 @@
 import json
+from typing import Any
 
-from terrain.models import AuditFlag, AuditSeverity, Item, ItemType
+from terrain.models import Item, ItemType
 from terrain.scanners.base import BaseScanner
 
 
@@ -35,7 +36,7 @@ class BrewScanner(BaseScanner):
         for formula in formulae:
             info_out, info_rc = self._run(["brew", "info", "--json=v2", formula])
             version = None
-            metadata: dict = {"taps": taps}
+            metadata: dict[str, Any] = {"taps": taps}
             locations: list[str] = []
 
             if info_rc == 0 and info_out:
@@ -79,7 +80,7 @@ class BrewScanner(BaseScanner):
         for cask in casks:
             info_out, info_rc = self._run(["brew", "info", "--json=v2", "--cask", cask])
             version = None
-            metadata: dict = {}
+            metadata: dict[str, Any] = {}
             locations: list[str] = []
 
             if info_rc == 0 and info_out:

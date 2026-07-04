@@ -1,5 +1,5 @@
-import re
 from pathlib import Path
+from typing import Any
 
 from terrain.models import AuditFlag, AuditSeverity, Item, ItemType
 from terrain.scanners.base import BaseScanner
@@ -20,7 +20,7 @@ class SSHScanner(BaseScanner):
 
         items: list[Item] = []
         audit_flags: list[AuditFlag] = []
-        metadata: dict = {}
+        metadata: dict[str, Any] = {}
         config_paths: list[str] = []
 
         # SSH config
@@ -73,7 +73,7 @@ class SSHScanner(BaseScanner):
                     # Check if it looks like a private key
                     try:
                         first_line = ""
-                        with open(f, "r", errors="replace") as fh:
+                        with open(f, errors="replace") as fh:
                             first_line = fh.readline().strip()
                         if "PRIVATE KEY" in first_line or "BEGIN OPENSSH" in first_line:
                             private_keys.append(f.name)
@@ -118,10 +118,10 @@ class SSHScanner(BaseScanner):
         text: str,
         location: str,
         audit_flags: list[AuditFlag],
-        metadata: dict,
+        metadata: dict[str, Any],
     ) -> None:
-        host_blocks: list[dict] = []
-        current_host: dict = {}
+        host_blocks: list[dict[str, Any]] = []
+        current_host: dict[str, Any] = {}
         forward_agent_hosts: list[str] = []
         strict_host_checking_no: list[str] = []
 

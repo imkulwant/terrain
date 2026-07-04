@@ -3,7 +3,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from terrain.models import Item, ItemType, Snapshot
+from terrain.models import Item, Snapshot
 
 
 def _item_key(item: Item) -> tuple[str, str]:

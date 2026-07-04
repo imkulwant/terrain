@@ -1,5 +1,4 @@
 from collections import Counter
-from datetime import datetime
 
 from rich.console import Console
 from rich.panel import Panel
@@ -16,9 +15,9 @@ def render_status(
 ) -> None:
     """Render the status overview panel."""
     # Counts by type
-    type_counts: Counter = Counter()
-    source_counts: Counter = Counter()
-    flag_counts: Counter = Counter()
+    type_counts: Counter[ItemType] = Counter()
+    source_counts: Counter[str] = Counter()
+    flag_counts: Counter[AuditSeverity] = Counter()
     total_flags = 0
 
     for item in latest.items:
@@ -85,23 +84,6 @@ def render_status(
             diff_text.append("No changes since previous scan", style="dim")
     else:
         diff_text.append("No previous snapshot to compare", style="dim")
-
-    # Compose panel
-    from rich.columns import Columns
-    from rich import box as rich_box
-
-    summary_lines = [
-        time_text,
-        Text(f"Total items: {len(latest.items)}", style="bold"),
-        Text(""),
-        type_table,
-        Text(""),
-        Text("Audit flags:", style="bold"),
-        flags_text,
-        Text(""),
-        Text("Changes:", style="bold"),
-        diff_text,
-    ]
 
     # Render each element
     console.print(Panel(

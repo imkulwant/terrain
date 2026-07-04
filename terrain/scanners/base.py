@@ -1,17 +1,20 @@
 import subprocess
 import sys
+from abc import ABC, abstractmethod
 from typing import Any
 
 from terrain.models import Item
 
 
-class BaseScanner:
+class BaseScanner(ABC):
     name: str = "base"
+    verbose: bool = False
 
+    @abstractmethod
     def scan(self) -> list[Item]:
-        raise NotImplementedError
+        ...
 
-    def _run(self, cmd: list[str], **kwargs) -> tuple[str, int]:
+    def _run(self, cmd: list[str], **kwargs: Any) -> tuple[str, int]:
         """Run a shell command, return (stdout, returncode). Never raises."""
         try:
             result = subprocess.run(
@@ -27,11 +30,11 @@ class BaseScanner:
         except FileNotFoundError:
             return "", 127
         except Exception as e:
-            if "--verbose" in sys.argv:
+            if self.verbose:
                 print(f"[{self.name}] error running {cmd}: {e}", file=sys.stderr)
             return "", 1
 
-    def _run_shell(self, cmd: str, **kwargs) -> tuple[str, int]:
+    def _run_shell(self, cmd: str, **kwargs: Any) -> tuple[str, int]:
         """Run a shell string command (uses shell=True). Never raises."""
         try:
             result = subprocess.run(
@@ -46,7 +49,7 @@ class BaseScanner:
         except subprocess.TimeoutExpired:
             return "", 1
         except Exception as e:
-            if "--verbose" in sys.argv:
+            if self.verbose:
                 print(f"[{self.name}] error running shell cmd: {e}", file=sys.stderr)
             return "", 1
 

@@ -5,12 +5,45 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "terrain"
 version = "0.1.0"
+description = "macOS system inventory and security audit tool"
+readme = "README.md"
+license = { text = "MIT" }
 requires-python = ">=3.11"
+authors = [
+    { name = "Kulwant Singh", email = "imkulsin@gmail.com" },
+]
+keywords = ["macos", "system", "inventory", "audit", "security", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Intended Audience :: System Administrators",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: System :: Systems Administration",
+    "Topic :: Security",
+    "Topic :: Utilities",
+]
 dependencies = [
     "typer>=0.12",
     "rich>=13",
     "pydantic>=2",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.4",
+    "mypy>=1.10",
+]
+
+[project.urls]
+Repository = "https://github.com/kulwant/terrain"
+"Bug Tracker" = "https://github.com/kulwant/terrain/issues"
 
 [project.scripts]
 terrain = "terrain.cli:app"
@@ -18,3 +51,20 @@ terrain = "terrain.cli:app"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["terrain*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+ignore_missing_imports = true

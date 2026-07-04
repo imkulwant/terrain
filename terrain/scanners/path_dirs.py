@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Any
 
 from terrain.models import AuditFlag, AuditSeverity, Item, ItemType
 from terrain.scanners.base import BaseScanner
@@ -18,15 +19,15 @@ class PathDirsScanner(BaseScanner):
             return []
 
         audit_flags: list[AuditFlag] = []
-        metadata: dict = {
+        metadata: dict[str, Any] = {
             "path_entries": entries,
             "entry_count": len(entries),
         }
 
-        dir_details: list[dict] = []
+        dir_details: list[dict[str, Any]] = []
         for entry in entries:
             d = Path(entry)
-            detail: dict = {"path": entry, "exists": d.exists()}
+            detail: dict[str, Any] = {"path": entry, "exists": d.exists()}
 
             if not d.exists():
                 audit_flags.append(
