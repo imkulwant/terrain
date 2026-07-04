@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+*.egg
+
+# macOS
+.DS_Store
+.DS_Store?
+
+# terrain runtime data
+~/.terrain/
+
+# IDE
+.idea/
+.vscode/

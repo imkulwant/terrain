@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "terrain"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12",
+    "rich>=13",
+    "pydantic>=2",
+]
+
+[project.scripts]
+terrain = "terrain.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["terrain*"]
