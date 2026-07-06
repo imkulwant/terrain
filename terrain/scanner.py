@@ -8,6 +8,7 @@ from terrain.scanners.base import BaseScanner
 from terrain.scanners.bins import BinsScanner
 from terrain.scanners.brew import BrewScanner
 from terrain.scanners.cargo import CargoScanner
+from terrain.scanners.dotfiles import DotfilesScanner
 from terrain.scanners.gem import GemScanner
 from terrain.scanners.jenv import JenvScanner
 from terrain.scanners.launchd import LaunchdScanner
@@ -20,6 +21,7 @@ from terrain.scanners.pip import PipScanner
 from terrain.scanners.pyenv import PyenvScanner
 from terrain.scanners.shell import ShellScanner
 from terrain.scanners.ssh import SSHScanner
+from terrain.scanners.vscode import VscodeScanner
 
 # BinsScanner is handled separately for post-processing
 _BINS_SCANNER = BinsScanner()
@@ -40,6 +42,8 @@ _PRIMARY_SCANNERS: list[BaseScanner] = [
     ShellScanner(),
     SSHScanner(),
     PathDirsScanner(),
+    DotfilesScanner(),
+    VscodeScanner(),
 ]
 
 ALL_SCANNERS: list[BaseScanner] = _PRIMARY_SCANNERS + [_BINS_SCANNER]

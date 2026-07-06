@@ -299,6 +299,171 @@ def bins(
 
 
 @app.command()
+def dotfiles(
+    orphans_only: bool = typer.Option(
+        False, "--orphans-only", help="Only show orphaned/stale entries"
+    ),
+) -> None:
+    """List home directory dotfiles and show who owns each one."""
+    from terrain import store
+
+    latest = store.latest_snapshot()
+    if not latest:
+        _abort("No snapshots found. Run 'terrain scan' first.")
+
+    items = [i for i in latest.items if i.item_type == ItemType.home_config]
+
+    if orphans_only:
+        items = [
+            i for i in items
+            if any(
+                f.severity == AuditSeverity.warning and "Orphaned" in f.message
+                for f in i.audit_flags
+            )
+        ]
+
+    if not items:
+        console.print("[dim]No home config items found.[/dim]")
+        return
+
+    t = Table(show_header=True, header_style="bold blue", expand=False)
+    t.add_column("Name", style="cyan", no_wrap=True, max_width=23)
+    t.add_column("Owner", style="green", no_wrap=True, max_width=20)
+    t.add_column("Active", justify="center", no_wrap=True, min_width=6)
+    t.add_column("Modified", style="dim", no_wrap=True, min_width=10)
+    t.add_column("Flags", justify="right", no_wrap=True, min_width=5)
+
+    for item in sorted(items, key=lambda x: x.name.lower()):
+        active = item.metadata.get("active")
+        active_via = item.metadata.get("active_via", "")
+        if active is True:
+            if active_via.startswith("vscode:"):
+                active_str = "[cyan]vsc[/cyan]"
+            else:
+                active_str = "[green]yes[/green]"
+        elif active is False:
+            active_str = "[red]no[/red]"
+        else:
+            active_str = "[dim]?[/dim]"
+
+        modified = item.metadata.get("modified", "-")
+        owner = item.metadata.get("owner", "-")
+
+        flag_count = len(item.audit_flags)
+        flag_str = ""
+        if flag_count:
+            crit = sum(1 for f in item.audit_flags if f.severity == AuditSeverity.critical)
+            warn = sum(1 for f in item.audit_flags if f.severity == AuditSeverity.warning)
+            if crit:
+                flag_str = f"[red]{flag_count}[/red]"
+            elif warn:
+                flag_str = f"[yellow]{flag_count}[/yellow]"
+            else:
+                flag_str = f"[blue]{flag_count}[/blue]"
+
+        t.add_row(item.name, owner, active_str, modified, flag_str or "-")
+
+    console.print(t)
+    orphan_count = sum(
+        1 for i in items
+        if any("Orphaned" in f.message for f in i.audit_flags)
+    )
+    unknown_count = sum(1 for i in items if i.metadata.get("owner") == "unknown")
+    console.print(f"\n[dim]{len(items)} dotfiles[/dim]", end="")
+    if orphan_count:
+        console.print(f"  [yellow]{orphan_count} orphaned[/yellow]", end="")
+    if unknown_count:
+        console.print(f"  [blue]{unknown_count} unknown origin[/blue]", end="")
+    console.print()
+
+
+@app.command()
+def vscode(
+    category: str | None = typer.Option(
+        None, "--category", "-c",
+        help="Filter by category (e.g. Linters, Debuggers, AI)",
+    ),
+) -> None:
+    """List installed VS Code extensions and configuration."""
+    from terrain import store
+
+    latest = store.latest_snapshot()
+    if not latest:
+        _abort("No snapshots found. Run 'terrain scan' first.")
+
+    ext_items = [i for i in latest.items if i.item_type == ItemType.vscode_extension]
+
+    if category:
+        category_lower = category.lower()
+        ext_items = [
+            i for i in ext_items
+            if any(category_lower in c.lower() for c in i.metadata.get("categories", []))
+        ]
+
+    cfg_item = next(
+        (i for i in latest.items if i.name == "vscode-user-settings"), None
+    )
+
+    if not ext_items and not cfg_item:
+        console.print("[dim]No VS Code data found.[/dim]")
+        return
+
+    # Config summary panel
+    if cfg_item:
+        from rich.panel import Panel
+
+        lines: list[str] = []
+        if cfg_item.metadata.get("extension_settings_count") is not None:
+            lines.append(f"[dim]Extension settings keys:[/dim] {cfg_item.metadata['extension_settings_count']}")
+        if cfg_item.metadata.get("custom_keybindings") is not None:
+            lines.append(f"[dim]Custom keybindings:[/dim] {cfg_item.metadata['custom_keybindings']}")
+        if cfg_item.metadata.get("mcp_servers"):
+            lines.append(f"[dim]MCP servers:[/dim] {', '.join(cfg_item.metadata['mcp_servers'])}")
+        if cfg_item.metadata.get("profiles"):
+            lines.append(f"[dim]Profiles:[/dim] {cfg_item.metadata['profiles']}")
+        if cfg_item.metadata.get("snippet_files"):
+            lines.append(f"[dim]Snippet files:[/dim] {cfg_item.metadata['snippet_files']}")
+        if cfg_item.audit_flags:
+            for flag in cfg_item.audit_flags:
+                lines.append(f"[bold red][!] {flag.message}[/bold red]")
+        if lines:
+            console.print(Panel("\n".join(lines), title="[bold]VS Code Config[/bold]", border_style="blue"))
+
+    if not ext_items:
+        return
+
+    # Extensions table - fits 80-col terminal: 28+20+10+9 = 67 content + 13 overhead = 80
+    t = Table(show_header=True, header_style="bold blue", expand=False)
+    t.add_column("Extension ID", style="cyan", no_wrap=True, max_width=28)
+    t.add_column("Display Name", no_wrap=True, max_width=20)
+    t.add_column("Version", style="dim", no_wrap=True, max_width=10)
+    t.add_column("Category", style="green", no_wrap=True, max_width=9)
+
+    for item in sorted(ext_items, key=lambda x: x.name):
+        display_name = item.metadata.get("display_name", "")
+        categories = item.metadata.get("categories", [])
+
+        # When filtering, prefer showing the matched category so the match is obvious
+        if category:
+            cat = next(
+                (c for c in categories if category.lower() in c.lower()),
+                categories[0] if categories else "-",
+            )
+        else:
+            cat = categories[0] if categories else "-"
+
+        t.add_row(
+            item.name,
+            display_name if display_name.lower() != item.name else "-",
+            item.version or "-",
+            cat,
+        )
+
+    console.print(t)
+    console.print(f"\n[dim]{len(ext_items)} extensions[/dim]")
+
+
+@app.command()
 def ai() -> None:
     """Show all AI tool configurations."""
     from terrain import store

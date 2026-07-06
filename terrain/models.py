@@ -15,6 +15,8 @@ class ItemType(StrEnum):
     launch_agent = "launch_agent"
     launch_daemon = "launch_daemon"
     shell_config = "shell_config"
+    home_config = "home_config"
+    vscode_extension = "vscode_extension"
 
 
 class AuditSeverity(StrEnum):

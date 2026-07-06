@@ -21,7 +21,9 @@ $ terrain diff
 ## Features
 
 - **Full inventory** - Homebrew formulae and casks, pip, npm, cargo, gem, Mac App Store, pyenv/nvm/jenv/mise language
-  versions, launchd agents/daemons, shell configs, SSH keys, PATH binaries
+  versions, launchd agents/daemons, shell configs, SSH keys, PATH binaries, home directory dotfiles
+- **Dotfile audit** - Maps every `~/.*` entry to its owning tool, flags orphaned configs (tool uninstalled but dir
+  remains), unknown-origin entries, and oversized caches
 - **AI tool auditing** - Scans Claude Code, Cursor, GitHub Copilot, Continue, Ollama, and OpenAI CLI configs; flags
   embedded secrets
 - **Secrets detection** - Finds API keys, tokens, and credentials in dotfiles before they leak
@@ -102,6 +104,7 @@ terrain audit
 | `terrain audit`        | Show all security and configuration flags                                    |
 | `terrain bins`         | List all binaries found in PATH; use `--orphans-only` for unmanaged installs |
 | `terrain ai`           | Show all detected AI tool configurations                                     |
+| `terrain dotfiles`     | List home directory dotfiles - owner, purpose, active status, audit flags    |
 | `terrain where <name>` | Find where a tool lives across all items                                     |
 | `terrain version`      | Show the installed version                                                   |
 
@@ -112,6 +115,7 @@ terrain list --type package        # Only packages
 terrain list --source brew         # Only Homebrew formulae
 terrain list --source pip          # Only pip packages
 terrain list --type binary         # Only PATH binaries
+terrain list --type home_config    # Only home directory dotfiles
 ```
 
 ---
@@ -133,6 +137,7 @@ terrain list --type binary         # Only PATH binaries
 | `ssh`                             | SSH keys, config, and known hosts                          |
 | `bins`                            | All executables found in `$PATH` directories               |
 | `ai_configs`                      | Claude Code, Cursor, Copilot, Continue, Ollama, OpenAI CLI |
+| `dotfiles`                        | All `~/.*` entries - owner, purpose, active status, size   |
 
 ---
 
